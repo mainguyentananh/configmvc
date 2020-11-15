@@ -1,0 +1,130 @@
+package com.demo.controller;
+
+import java.util.List;
+
+
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.ModelMap;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+
+import com.demo.model.Student;
+import com.demo.services.stdServices;
+
+@Controller
+public class stdController {
+	
+	@Autowired
+	private stdServices sv;	
+	
+	@RequestMapping(value="/",method=RequestMethod.GET)
+	public String home(ModelMap md) {
+		List<Student> listStudent = sv.getAll();
+		md.addAttribute("listStudent", listStudent);
+		return "index";
+	}
+	
+	@RequestMapping(value="/add",method=RequestMethod.GET)
+	public String CreateStd(ModelMap md) {
+		Student std = new Student();
+		md.addAttribute("student",std);
+		return "addnew";
+	}
+	
+	@RequestMapping(value = "/save",method=RequestMethod.POST,produces = "application/x-www-form-urlencoded;charset=UTF-8")
+	public String savestd(@ModelAttribute("student") Student std) {
+		sv.save(std);
+		return "redirect:/";
+	}
+	
+	
+	@RequestMapping(value = "/delete/{id}",method=RequestMethod.GET)
+	public String deletestd(@PathVariable(value = "id") Long id) {
+		sv.delete(id);
+		return "redirect:/";
+	}
+	
+	@RequestMapping(value = "/edit",method=RequestMethod.GET)
+	public String editstd(@RequestParam(value = "id") Long id ,ModelMap md) {
+		Student temp = sv.getstd(id);
+		md.addAttribute("studentedit", temp);
+		return "edit";
+	}
+	
+	@RequestMapping(value = "/saveedit",method=RequestMethod.POST,produces = "application/x-www-form-urlencoded;charset=UTF-8")
+	public String saveedit(@ModelAttribute("studentedit")  Student student) {
+		sv.update(student);
+		return "redirect:/";
+	}
+}
+
+-----------------------------------------------------------------------------------------------------------------------------
+
+package com.demo.dao;
+
+import java.util.List;
+
+import org.hibernate.Session;
+import org.hibernate.SessionFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Repository;
+
+import com.demo.model.Student;
+
+@Repository
+public class stdDaoImpl implements stdDao {
+
+	@Autowired
+	private SessionFactory sessionfactory;
+	
+
+	
+//	@Override
+//	public Long save(Student std) {
+//		    Session session = sessionfactory.getCurrentSession();
+//		    Long studentID = (Long) session.save(std);
+//		    return studentID;
+//	}
+
+	@Override
+	public void Save(Student std) {
+		Session session = sessionfactory.getCurrentSession();
+		session.save(std);
+	}
+
+	
+	@Override
+	public void update(Student std) {
+		Session session = sessionfactory.getCurrentSession();
+		session.update(std);
+	}
+	
+
+
+	@Override
+	public void delete(Long std) {
+		Session session = sessionfactory.getCurrentSession();
+		session.delete(getstd(std));
+	}
+
+	@Override
+	@SuppressWarnings("unchecked")
+	public List<Student> getAll() {
+		Session session = sessionfactory.getCurrentSession();
+		List<Student> std = session.createQuery("from Student").list();
+		return std;
+	}
+
+	@Override
+	public Student getstd(Long id) {
+		Session session = sessionfactory.getCurrentSession();
+		Student sv = session.get(Student.class, id);
+		return sv;
+	}
+	
+}
