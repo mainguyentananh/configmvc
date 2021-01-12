@@ -2,8 +2,6 @@ package com.demo.controller;
 
 import java.util.List;
 
-
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
@@ -18,53 +16,131 @@ import com.demo.services.stdServices;
 
 @Controller
 public class stdController {
-	
+
 	@Autowired
-	private stdServices sv;	
+	private stdServices sv;
+
 	
-	@RequestMapping(value="/",method=RequestMethod.GET)
+	
+	@RequestMapping(value = "/", method = RequestMethod.GET)
 	public String home(ModelMap md) {
 		List<Student> listStudent = sv.getAll();
 		md.addAttribute("listStudent", listStudent);
-		return "index";
+		return "home";
 	}
-	
-	@RequestMapping(value="/add",method=RequestMethod.GET)
+
+	@RequestMapping(value = "/search", method = RequestMethod.GET)
+	public String search(ModelMap md, @RequestParam("context") String key) {
+		List<Student> listStudent = sv.search(key);
+		md.addAttribute("listStudent", listStudent);
+		return "home";
+	}
+
+	@RequestMapping(value = "/add", method = RequestMethod.GET)
 	public String CreateStd(ModelMap md) {
 		Student std = new Student();
-		md.addAttribute("student",std);
-		return "addnew";
+		md.addAttribute("student", std);
+		return "add";
 	}
-	
-	@RequestMapping(value = "/save",method=RequestMethod.POST,produces = "application/x-www-form-urlencoded;charset=UTF-8")
+
+	@RequestMapping(value = "/save", method = RequestMethod.POST, produces = "application/x-www-form-urlencoded;charset=UTF-8")
 	public String savestd(@ModelAttribute("student") Student std) {
 		sv.save(std);
 		return "redirect:/";
 	}
-	
-	
-	@RequestMapping(value = "/delete/{id}",method=RequestMethod.GET)
+
+	@RequestMapping(value = "/delete/{id}", method = RequestMethod.GET)
 	public String deletestd(@PathVariable(value = "id") Long id) {
 		sv.delete(id);
 		return "redirect:/";
 	}
-	
-	@RequestMapping(value = "/edit",method=RequestMethod.GET)
-	public String editstd(@RequestParam(value = "id") Long id ,ModelMap md) {
+
+	@RequestMapping(value = "/edit", method = RequestMethod.GET)
+	public String editstd(@RequestParam(value = "id") Long id, ModelMap md) {
 		Student temp = sv.getstd(id);
 		md.addAttribute("studentedit", temp);
 		return "edit";
 	}
-	
-	@RequestMapping(value = "/saveedit",method=RequestMethod.POST,produces = "application/x-www-form-urlencoded;charset=UTF-8")
-	public String saveedit(@ModelAttribute("studentedit")  Student student) {
+
+	@RequestMapping(value = "/saveedit", method = RequestMethod.POST, produces = "application/x-www-form-urlencoded;charset=UTF-8")
+	public String saveedit(@ModelAttribute("studentedit") Student student) {
 		sv.update(student);
 		return "redirect:/";
 	}
 }
 
 -----------------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------SERVICES-----------------------------------------------------------------
 
+package com.demo.services;
+
+import java.util.List;
+
+import javax.transaction.Transactional;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.demo.dao.stdDao;
+import com.demo.model.Student;
+
+@Service
+@Transactional
+public class stdServicesImpl implements stdServices {
+
+	@Autowired
+	private stdDao dao;
+
+	@Override
+	@Transactional
+	public boolean deleteAll() {
+		List<Student> ls = dao.getAll();
+		for (Student x : ls) {
+			Long temp = x.getId();
+			dao.delete(temp);
+		}
+
+		return true;
+	}
+
+	@Override
+	@Transactional
+	public void save(Student std) {
+		dao.Save(std);
+	}
+
+	@Override
+	@Transactional
+	public void update(Student std) {
+		dao.update(std);
+	}
+
+	@Override
+	@Transactional
+	public void delete(Long std) {
+		dao.delete(std);
+	}
+
+	@Override
+	@Transactional
+	public List<Student> getAll() {
+		return dao.getAll();
+	}
+
+	@Override
+	@Transactional
+	public Student getstd(Long id) {
+		return dao.getstd(id);
+	}
+
+	@Override
+	@Transactional
+	public List<Student> search(String key) {
+		return dao.search(key);
+	}
+}
+---------------------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------DAO----------------------------------------------------------------------
 package com.demo.dao;
 
 import java.util.List;
@@ -81,30 +157,19 @@ public class stdDaoImpl implements stdDao {
 
 	@Autowired
 	private SessionFactory sessionfactory;
-	
-
-	
-//	@Override
-//	public Long save(Student std) {
-//		    Session session = sessionfactory.getCurrentSession();
-//		    Long studentID = (Long) session.save(std);
-//		    return studentID;
-//	}
 
 	@Override
 	public void Save(Student std) {
 		Session session = sessionfactory.getCurrentSession();
-		session.save(std);
+		session.saveOrUpdate(std);
 	}
 
-	
 	@Override
 	public void update(Student std) {
 		Session session = sessionfactory.getCurrentSession();
 		session.update(std);
-	}
-	
 
+	}
 
 	@Override
 	public void delete(Long std) {
@@ -126,5 +191,12 @@ public class stdDaoImpl implements stdDao {
 		Student sv = session.get(Student.class, id);
 		return sv;
 	}
-	
+
+	@Override
+	public List<Student> search(String key) {
+		Session session = sessionfactory.getCurrentSession();
+		List<Student> std = session.createQuery("from Student where name like '%" + key + "%'", Student.class).list();
+		return std;
+	}
+
 }
