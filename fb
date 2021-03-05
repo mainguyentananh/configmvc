@@ -1,0 +1,371 @@
+---fb service---
+package demo.spring.service;
+
+import org.springframework.social.connect.Connection;
+import org.springframework.social.facebook.api.Facebook;
+import org.springframework.social.facebook.connect.FacebookConnectionFactory;
+import org.springframework.social.oauth2.AccessGrant;
+import org.springframework.social.oauth2.OAuth2Operations;
+import org.springframework.social.oauth2.OAuth2Parameters;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+@Transactional
+public class facebookService {
+
+	private final String app_id = "239697844480694";
+
+	private final String app_secret = "6b2021cb73ddf75bc88042119105fa42";
+
+	private FacebookConnectionFactory factory = new FacebookConnectionFactory(app_id, app_secret);
+
+	public String facebookLogin() {
+		System.out.println("inside fb login");
+		OAuth2Operations operations = factory.getOAuthOperations();
+		OAuth2Parameters params = new OAuth2Parameters();
+		params.setRedirectUri("http://localhost:8080/demo/doLogin");
+		params.setScope("email, public_profile");
+		String authUrl = operations.buildAuthenticateUrl(params);
+		System.out.println("Generated url is= " + authUrl);
+		return authUrl;
+	}
+
+	public AccessGrant createAccessToken(String code) {
+		OAuth2Operations operations = factory.getOAuthOperations();
+		AccessGrant accessToken = operations.exchangeForAccess(code, "http://localhost:8080/demo/doLogin", null);
+		System.out.println("code............. " + code); 
+		System.out.println("accessToken......... " + accessToken.getAccessToken());
+		
+		return accessToken;
+	}
+
+	public Connection<Facebook> connection(AccessGrant accessToken) {
+		return factory.createConnection(accessToken);
+	}
+
+	
+
+}
+--------------------------fb controller---
+
+package demo.spring.controller;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.social.connect.Connection;
+import org.springframework.social.facebook.api.Facebook;
+import org.springframework.social.facebook.api.User;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+
+import demo.spring.service.facebookService;
+
+@Controller
+public class facebooklogincontroller {
+	@Autowired
+	private facebookService sv;
+
+	@GetMapping("/trangchu")
+	public String home() {
+		return "hello";
+	}
+
+	@GetMapping(value = "/facebookLogin")
+	public String facebookLogin() {
+		return "redirect:" + sv.facebookLogin();
+	}
+
+	@GetMapping(value = "/doLogin")
+	public String doLogin(@RequestParam("code") String code) {
+		Connection<Facebook> connection = sv.connection(sv.createAccessToken(code));
+		Facebook facebook = connection.getApi();
+		String[] fields = { "id", "name", "email" };
+		User userProfile = facebook.fetchObject("me", User.class, fields);
+		System.out.println("id........... " + userProfile.getId());
+		System.out.println("name........... " + userProfile.getName());
+		System.out.println("email........... " + userProfile.getEmail());
+		
+		return "success";
+	}
+
+}
+//import org.springframework.social.connect.Connection;
+//import org.springframework.social.facebook.api.Facebook;
+//import org.springframework.social.facebook.api.User;
+//import org.springframework.social.facebook.connect.FacebookConnectionFactory;
+//import org.springframework.social.oauth2.AccessGrant;
+//import org.springframework.social.oauth2.OAuth2Operations;
+//import org.springframework.social.oauth2.OAuth2Parameters;
+//import org.springframework.stereotype.Controller;
+//import org.springframework.web.bind.annotation.GetMapping;
+//import org.springframework.web.bind.annotation.RequestParam;
+//
+//@Controller
+//public class facebooklogincontroller {
+//
+//	private final String app_id = "501163344201414";
+//
+//	private final String app_secret = "0440ffb46f4050f0efb657c6ee8c51d7";
+//
+//	private FacebookConnectionFactory factory = new FacebookConnectionFactory(app_id, app_secret);
+//
+//	@GetMapping("/trangchu")
+//	public String home() {
+//		return "hello";
+//	}
+//
+//	@GetMapping(value = "/facebookLogin")
+//	public String facebookLogin() {
+//		System.out.println("inside fb login");
+//		OAuth2Operations operations = factory.getOAuthOperations();
+//		OAuth2Parameters params = new OAuth2Parameters();
+//		params.setRedirectUri("http://localhost:8080/demo/doLogin");
+//		params.setScope("email, public_profile");
+//		String authUrl = operations.buildAuthenticateUrl(params);
+//		System.out.println("Generated url is= " + authUrl);
+//		return "redirect:" + authUrl;
+//	}
+//
+//	@GetMapping(value = "/doLogin")
+//	public String doLogin(@RequestParam("code") String code) {
+//		System.out.println("code............. " + code);
+//		OAuth2Operations operations = factory.getOAuthOperations();
+//		AccessGrant accessToken = operations.exchangeForAccess(code, "http://localhost:8080/demo/doLogin", null);
+//		System.out.println("accessToken......... " + accessToken.getAccessToken());
+//		Connection<Facebook> connection = factory.createConnection(accessToken);
+//		Facebook facebook = connection.getApi();
+//		String[] fields = { "id", "name", "email" };
+//		User userProfile = facebook.fetchObject("me", User.class, fields);
+//		System.out.println("id........... " + userProfile.getId());
+//		System.out.println("name........... " + userProfile.getName());
+//		System.out.println("email........... " + userProfile.getEmail());
+//		return "success";
+//	}
+//
+//}
+----------------------------------------------------web
+<?xml version="1.0" encoding="UTF-8" ?>
+<web-app version="3.0" xmlns="http://java.sun.com/xml/ns/j2ee"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://java.sun.com/xml/ns/j2ee 
+   http://java.sun.com/xml/ns/j2ee/web-app_3_0.xsd">
+
+	<display-name>toolfacebook</display-name>
+	
+	<welcome-file-list>
+    	<welcome-file>index.jsp</welcome-file>
+	</welcome-file-list>
+	
+	<servlet>
+		<servlet-name>spring</servlet-name>
+		<servlet-class>
+			org.springframework.web.servlet.DispatcherServlet
+		</servlet-class>
+		<load-on-startup>1</load-on-startup>
+	</servlet>
+
+	<servlet-mapping>
+		<servlet-name>spring</servlet-name>
+		<url-pattern>/</url-pattern>
+	</servlet-mapping>
+
+	<filter>
+		<filter-name>encoding-filter</filter-name>
+		<filter-class>
+			org.springframework.web.filter.CharacterEncodingFilter
+		</filter-class>
+		<init-param>
+			<param-name>encoding</param-name>
+			<param-value>UTF-8</param-value>
+		</init-param>
+		<init-param>
+			<param-name>forceEncoding</param-name>
+			<param-value>true</param-value>
+		</init-param>
+	</filter>
+
+	<filter-mapping>
+		<filter-name>encoding-filter</filter-name>
+		<url-pattern>/*</url-pattern>
+	</filter-mapping>
+
+</web-app>
+--------------------spring servlet-------------
+
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:mvc="http://www.springframework.org/schema/mvc"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd
+       http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc.xsd
+       http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd">
+	
+	
+   <context:component-scan base-package = "demo.spring" />
+	<mvc:annotation-driven />
+   <bean class = "org.springframework.web.servlet.view.InternalResourceViewResolver">
+      <property name = "prefix" value = "/WEB-INF/views/" />
+      <property name = "suffix" value = ".jsp" />
+   </bean>
+
+</beans>
+----------------------------------------------------------
+-------------index--------------
+<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>
+<c:redirect url="/trangchu" />
+--------------
+----pom--------------
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>toolfacebook</groupId>
+  <artifactId>demo</artifactId>
+  <packaging>war</packaging>
+  <version>0.0.1-SNAPSHOT</version>
+  <name>demo Maven Webapp</name>
+  <url>http://maven.apache.org</url>
+ <properties>
+		<spring.version>5.2.8.RELEASE</spring.version>		
+		<servlet-api-version>3.0.1</servlet-api-version>
+		<jsp-version>2.1</jsp-version>
+		<jstl-version>1.2</jstl-version>
+		<json.version>2.9.8</json.version>
+	</properties>
+
+	<dependencies>
+
+		<!-- Spring MVC -->
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-core</artifactId>
+			<version>${spring.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-context</artifactId>
+			<version>${spring.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-web</artifactId>
+			<version>${spring.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-webmvc</artifactId>
+			<version>${spring.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-orm</artifactId>
+			<version>${spring.version}</version>
+		</dependency>
+		<!-- Servlet and JSP -->
+		<dependency>
+			<groupId>javax.servlet</groupId>
+			<artifactId>javax.servlet-api</artifactId>
+			<version>${servlet-api-version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>javax.servlet.jsp</groupId>
+			<artifactId>jsp-api</artifactId>
+			<version>${jsp-version}</version>
+			<scope>provided</scope>
+		</dependency>
+
+		<!-- JSTL dependency -->
+		<dependency>
+			<groupId>jstl</groupId>
+			<artifactId>jstl</artifactId>
+			<version>${jstl-version}</version>
+		</dependency>
+
+		<!-- https://mvnrepository.com/artifact/taglibs/standard -->
+		<dependency>
+			<groupId>taglibs</groupId>
+			<artifactId>standard</artifactId>
+			<version>1.1.2</version>
+		</dependency>
+
+		<!-- https://mvnrepository.com/artifact/org.apache.tiles/tiles-extras -->
+		<dependency>
+			<groupId>org.apache.tiles</groupId>
+			<artifactId>tiles-extras</artifactId>
+			<version>3.0.8</version>
+		</dependency>
+
+		<!-- JSON -->
+		<dependency>
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-databind</artifactId>
+			<version>${json.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-core</artifactId>
+			<version>${json.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-annotations</artifactId>
+			<version>${json.version}</version>
+		</dependency>
+
+
+		<!-- https://mvnrepository.com/artifact/org.codehaus.jackson/jackson-mapper-asl -->
+		<dependency>
+			<groupId>org.codehaus.jackson</groupId>
+			<artifactId>jackson-mapper-asl</artifactId>
+			<version>1.9.13</version>
+		</dependency>
+
+		<!-- https://mvnrepository.com/artifact/org.codehaus.jackson/jackson-core-asl -->
+		<dependency>
+			<groupId>org.codehaus.jackson</groupId>
+			<artifactId>jackson-core-asl</artifactId>
+			<version>1.9.13</version>
+		</dependency>
+		
+		<dependency>
+  <groupId>org.springframework.social</groupId>
+  <artifactId>spring-social-facebook</artifactId>
+  <version>2.0.3.RELEASE</version>
+</dependency>
+	
+	<dependency>
+  <groupId>org.springframework.social</groupId>
+  <artifactId>spring-social-web</artifactId>
+  <version>1.1.4.RELEASE</version>
+</dependency>
+		 <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>3.8.1</version>
+      <scope>test</scope>
+    </dependency>
+
+	</dependencies>
+	<build>
+		<finalName>demo</finalName>
+		<plugins>
+			<plugin>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.7.0</version>
+				<configuration>
+					<source>1.8</source>
+					<target>1.8</target>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+ 
+</project>
