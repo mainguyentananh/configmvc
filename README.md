@@ -2,8 +2,9 @@
 
 1: git clone (https code github)  --branch (tên branch)
 2: git status
-4: git commit -a -m"commit frist"
-5: push
+4: git add *
+5 git commit -m"commit frist"
+6: push
 
 -------------------
 -backup vs đồng bộ
