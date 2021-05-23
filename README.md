@@ -14,3 +14,7 @@
 3: git push 
 
 git pull (để đồng bộ cho local với github)
+
+git add *
+git commit -m""
+git push origin master
